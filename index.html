@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suman TV — Production Hub</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d0f14;--bg2:#13161e;--bg3:#1a1e29;--bg4:#222736;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --text:#e8eaf0;--text2:#8b90a0;--text3:#555c70;
+  --accent:#6c8cff;--accent2:#a78bfa;
+  --green:#34d399;--amber:#fbbf24;--red:#f87171;
+  --teal:#22d3ee;--pink:#f472b6;--orange:#fb923c;
+  --r:10px;--rl:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.5;min-height:100vh;}
+
+/* ── LOGIN ── */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg);}
+.login-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);padding:36px 40px;width:380px;}
+.login-logo{display:flex;align-items:center;gap:12px;margin-bottom:28px;}
+.login-logo .icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;}
+.login-logo .name{font-size:17px;font-weight:600;}
+.login-logo .sub{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;}
+.login-title{font-size:20px;font-weight:600;margin-bottom:6px;}
+.login-sub{font-size:13px;color:var(--text2);margin-bottom:24px;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;}
+.field input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:border 0.15s;}
+.field input:focus{border-color:var(--accent);}
+.field input::placeholder{color:var(--text3);}
+.login-btn{width:100%;padding:11px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:opacity 0.15s;margin-top:4px;}
+.login-btn:hover{opacity:0.88;}
+.login-err{background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.2);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--red);margin-top:12px;display:none;}
+.login-loading{text-align:center;color:var(--text3);font-size:13px;margin-top:12px;display:none;}
+
+/* ── SHELL ── */
+#app{display:none;height:100vh;flex-direction:column;}
+#app.ready{display:flex;}
+.shell{display:flex;flex:1;overflow:hidden;}
+
+/* ── SIDEBAR ── */
+.sidebar{width:220px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;}
+.sb-logo{padding:16px 18px 14px;border-bottom:1px solid var(--border);}
+.brand{font-size:15px;font-weight:600;}
+.sub2{font-size:10px;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;margin-top:1px;}
+.sb-nav{padding:10px 0;flex:1;overflow-y:auto;}
+.sb-section{padding:8px 16px 3px;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;font-weight:500;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 16px;cursor:pointer;color:var(--text2);font-size:13px;transition:all 0.15s;position:relative;}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,0.04);}
+.nav-item.active{color:var(--accent);background:rgba(108,140,255,0.08);}
+.nav-item.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--accent);}
+.nav-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.sb-user{padding:12px 14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+.sb-avatar{width:28px;height:28px;border-radius:50%;background:rgba(108,140,255,0.2);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;}
+.sb-user-name{font-size:12px;color:var(--text);font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sb-user-role{font-size:10px;color:var(--text3);}
+.logout-btn{font-size:11px;color:var(--text3);cursor:pointer;padding:3px 6px;border-radius:4px;border:1px solid var(--border);background:transparent;transition:all 0.15s;}
+.logout-btn:hover{color:var(--red);border-color:rgba(248,113,113,0.3);}
+
+/* ── MAIN ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.page-header{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.page-title{font-size:17px;font-weight:600;letter-spacing:-0.3px;}
+.page-sub{font-size:12px;color:var(--text2);margin-top:1px;}
+.header-actions{display:flex;gap:8px;align-items:center;}
+.btn{padding:6px 13px;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:none;transition:all 0.15s;font-weight:500;}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text2);}
+.btn-ghost:hover{color:var(--text);background:var(--bg3);}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{opacity:0.88;}
+
+/* ── CONTENT ── */
+.content-area{flex:1;display:flex;overflow:hidden;}
+.page-scroll{flex:1;overflow-y:auto;padding:20px 24px;}
+.page-content{display:none;}
+.page-content.active{display:block;}
+
+/* ── LOADING OVERLAY ── */
+.loading-overlay{position:fixed;inset:0;background:rgba(13,15,20,0.8);display:flex;align-items:center;justify-content:center;z-index:50;backdrop-filter:blur(4px);}
+.loading-spinner{width:32px;height:32px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-overlay.hidden{display:none;}
+
+/* ── KPI ── */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px;}
+.kpi-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;}
+.kpi-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;font-weight:500;margin-bottom:6px;}
+.kpi-value{font-size:24px;font-weight:600;letter-spacing:-1px;font-family:'DM Mono',monospace;line-height:1;}
+.kpi-sub{font-size:11px;color:var(--text3);margin-top:5px;}
+
+/* ── PIPELINE ── */
+.pipeline{display:flex;margin-bottom:18px;}
+.ps{flex:1;background:var(--bg2);border:1px solid var(--border);padding:12px;position:relative;text-align:center;}
+.ps:first-child{border-radius:var(--r) 0 0 var(--r);}
+.ps:last-child{border-radius:0 var(--r) var(--r) 0;}
+.ps:not(:last-child){border-right:none;}
+.ps:not(:last-child)::after{content:'›';position:absolute;right:-10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:16px;z-index:2;}
+.ps-n{font-size:20px;font-weight:600;font-family:'DM Mono',monospace;}
+.ps-l{font-size:10px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:0.4px;}
+.ps-d{width:7px;height:7px;border-radius:50%;margin:0 auto 5px;}
+
+/* ── CARDS & TABLES ── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:16px;}
+.card-title{font-size:13px;font-weight:500;color:var(--text2);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
+.grid-60-40{display:grid;grid-template-columns:60fr 40fr;gap:14px;margin-bottom:18px;}
+.section-label{font-size:13px;font-weight:500;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.count-pill{font-size:10px;background:var(--bg4);color:var(--text3);padding:2px 7px;border-radius:20px;font-family:'DM Mono',monospace;}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;padding:8px 12px;color:var(--text3);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr.clickable:hover td{background:rgba(255,255,255,0.02);color:var(--text);cursor:pointer;}
+.td-p{color:var(--text)!important;font-weight:500;}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap;}
+.bg-green{background:rgba(52,211,153,0.12);color:var(--green);}
+.bg-amber{background:rgba(251,191,36,0.12);color:var(--amber);}
+.bg-red{background:rgba(248,113,113,0.12);color:var(--red);}
+.bg-blue{background:rgba(108,140,255,0.12);color:var(--accent);}
+.bg-teal{background:rgba(34,211,238,0.12);color:var(--teal);}
+.bg-pink{background:rgba(244,114,182,0.12);color:var(--pink);}
+.bg-gray{background:var(--bg4);color:var(--text3);}
+.bg-orange{background:rgba(251,146,60,0.12);color:var(--orange);}
+
+/* ── PROGRESS ── */
+.progress{background:var(--bg4);border-radius:4px;height:5px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:4px;}
+
+/* ── ALERT ITEMS ── */
+.alert-item{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);}
+.alert-item:last-child{border-bottom:none;}
+.alert-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+.alert-title{font-size:13px;color:var(--text);font-weight:500;}
+.alert-meta{font-size:11px;color:var(--text3);margin-top:1px;}
+
+/* ── DETAIL PANEL ── */
+.detail-panel{width:0;flex-shrink:0;background:var(--bg2);border-left:1px solid var(--border);overflow:hidden;transition:width 0.25s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;position:relative;}
+.detail-panel.open{width:460px;}
+.dp-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0;}
+.dp-close{width:26px;height:26px;border-radius:6px;background:var(--bg3);border:1px solid var(--border);color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.dp-close:hover{color:var(--text);}
+.dp-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
+.dp-tab{padding:9px 14px;font-size:12px;cursor:pointer;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.15s;font-weight:500;}
+.dp-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.dp-tc{display:none;padding:14px 16px;}
+.dp-tc.active{display:block;}
+.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+.meta-item{background:var(--bg3);border-radius:8px;padding:9px 11px;}
+.meta-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px;}
+.meta-value{font-size:13px;color:var(--text);font-weight:500;}
+.stage-track{display:flex;align-items:center;margin-bottom:14px;}
+.st-step{flex:1;text-align:center;position:relative;}
+.st-step:not(:last-child)::after{content:'';position:absolute;top:10px;left:50%;width:100%;height:1px;background:var(--border);}
+.st-dot{width:20px;height:20px;border-radius:50%;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;position:relative;z-index:1;border:1px solid var(--border);}
+.st-dot.done{background:rgba(52,211,153,0.2);border-color:var(--green);color:var(--green);}
+.st-dot.cur{background:rgba(108,140,255,0.2);border-color:var(--accent);color:var(--accent);}
+.st-dot.todo{background:var(--bg3);color:var(--text3);}
+.st-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.3px;}
+
+/* ── COMMENTS ── */
+.comment-thread{padding:0 16px 90px;overflow-y:auto;flex:1;}
+.c-item{display:flex;gap:9px;padding:11px 0;border-bottom:1px solid var(--border);}
+.c-item:last-child{border-bottom:none;}
+.c-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0;margin-top:2px;}
+.c-name{font-size:13px;font-weight:500;color:var(--text);}
+.c-role{font-size:11px;color:var(--text3);}
+.c-time{font-size:11px;color:var(--text3);margin-left:auto;}
+.c-text{font-size:13px;color:var(--text2);line-height:1.55;margin-top:3px;}
+.c-type{font-size:10px;padding:1px 7px;border-radius:10px;font-weight:500;}
+.comment-input-wrap{position:absolute;bottom:0;left:0;right:0;padding:10px 16px;background:var(--bg2);border-top:1px solid var(--border);}
+.comment-box{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;resize:none;min-height:60px;line-height:1.5;}
+.comment-box:focus{border-color:var(--accent);}
+.comment-box::placeholder{color:var(--text3);}
+.type-chips{display:flex;gap:5px;}
+.type-chip{padding:3px 9px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid var(--border);color:var(--text3);background:transparent;}
+.type-chip.active{background:rgba(108,140,255,0.12);color:var(--accent);border-color:rgba(108,140,255,0.4);}
+.send-btn{padding:5px 13px;background:var(--accent);color:#fff;border:none;border-radius:7px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;}
+.send-btn:disabled{opacity:0.4;cursor:default;}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--bg3);border:1px solid rgba(52,211,153,0.3);color:var(--green);font-size:13px;padding:9px 18px;border-radius:30px;opacity:0;transition:all 0.3s;z-index:200;pointer-events:none;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,0.4);}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── DOCTOR CARDS ── */
+.doctor-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px;}
+.doctor-header{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.doc-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0;}
+
+/* ── TABS ── */
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:16px;}
+.tab{padding:8px 14px;font-size:13px;cursor:pointer;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:500;}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tab-c{display:none;}
+.tab-c.active{display:block;}
+
+/* ── SEARCH ── */
+.search-bar{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;width:190px;}
+.search-bar:focus{border-color:var(--accent);}
+.search-bar::placeholder{color:var(--text3);}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:40px 20px;color:var(--text3);}
+.empty .e-icon{font-size:32px;margin-bottom:10px;}
+.empty .e-title{font-size:14px;font-weight:500;color:var(--text2);margin-bottom:4px;}
+.empty .e-sub{font-size:12px;}
+
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.page-content.active{animation:fadeIn 0.2s ease;}
+</style>
+</head>
+<body>
+
+<!-- ── LOADING ── -->
+<div class="loading-overlay hidden" id="loader">
+  <div class="loading-spinner"></div>
+</div>
+
+<!-- ── TOAST ── -->
+<div id="toast"></div>
+
+<!-- ══════════════════════════════════════
+     LOGIN SCREEN
+══════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="icon">S</div>
+      <div>
+        <div class="name">Suman TV</div>
+        <div class="sub">Production Hub</div>
+      </div>
+    </div>
+    <div class="login-title">Sign in</div>
+    <div class="login-sub">Use your team email and password to access the dashboard.</div>
+    <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="you@sumantv.in" autocomplete="email"></div>
+    <div class="field"><label>Password</label><input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"></div>
+    <button class="login-btn" onclick="doLogin()">Sign in →</button>
+    <div class="login-err" id="login-err"></div>
+    <div class="login-loading" id="login-loading">Signing in…</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     MAIN APP
+══════════════════════════════════════ -->
+<div id="app">
+  <div class="shell">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sb-logo">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;">S</div>
+          <div><div class="brand">Suman TV</div><div class="sub2">Production Hub</div></div>
+        </div>
+      </div>
+      <nav class="sb-nav">
+        <div class="sb-section">Overview</div>
+        <div class="nav-item active" onclick="nav('dashboard',this)"><div class="nav-dot" style="background:var(--accent)"></div><span>Dashboard</span></div>
+        <div class="nav-item" onclick="nav('projects',this)"><div class="nav-dot" style="background:var(--teal)"></div><span>Projects</span></div>
+        <div class="sb-section">People</div>
+        <div class="nav-item" onclick="nav('doctors',this)"><div class="nav-dot" style="background:var(--pink)"></div><span>Doctors</span></div>
+        <div class="nav-item" onclick="nav('team',this)"><div class="nav-dot" style="background:var(--amber)"></div><span>Team</span></div>
+      </nav>
+      <div class="sb-user">
+        <div class="sb-avatar" id="sb-avatar">?</div>
+        <div style="flex:1;min-width:0;">
+          <div class="sb-user-name" id="sb-name">—</div>
+          <div class="sb-user-role" id="sb-role">—</div>
+        </div>
+        <button class="logout-btn" onclick="doLogout()">Out</button>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main">
+      <div class="page-header">
+        <div>
+          <div class="page-title" id="page-title">Dashboard</div>
+          <div class="page-sub" id="page-sub">Loading…</div>
+        </div>
+        <div class="header-actions">
+          <input class="search-bar" type="text" placeholder="Search projects…" oninput="searchProj(this.value)" id="search-input">
+          <button class="btn btn-primary" id="new-proj-btn" onclick="openNewProjModal()" style="display:none;">+ New Project</button>
+        </div>
+      </div>
+
+      <div class="content-area">
+        <div class="page-scroll">
+
+          <!-- DASHBOARD -->
+          <div class="page-content active" id="page-dashboard">
+            <div class="kpi-row" id="kpi-row">
+              <div class="kpi-card"><div class="kpi-label">Total Projects</div><div class="kpi-value" id="kpi-total" style="color:var(--accent)">—</div><div class="kpi-sub">All time</div></div>
+              <div class="kpi-card"><div class="kpi-label">In Production</div><div class="kpi-value" id="kpi-active" style="color:var(--amber)">—</div><div class="kpi-sub">Active stages</div></div>
+              <div class="kpi-card"><div class="kpi-label">Live</div><div class="kpi-value" id="kpi-live" style="color:var(--green)">—</div><div class="kpi-sub">Published</div></div>
+              <div class="kpi-card"><div class="kpi-label">Doctors Active</div><div class="kpi-value" id="kpi-doctors" style="color:var(--teal)">—</div><div class="kpi-sub">Onboarded</div></div>
+              <div class="kpi-card"><div class="kpi-label">Team Members</div><div class="kpi-value" id="kpi-team" style="color:var(--pink)">—</div><div class="kpi-sub">All roles</div></div>
+            </div>
+            <div class="section-label">Live Pipeline</div>
+            <div class="pipeline" id="pipeline-row"></div>
+            <div class="section-label">Recent Projects <span class="count-pill" id="recent-count">0</span></div>
+            <div class="card" style="padding:0;overflow:hidden;margin-bottom:18px;">
+              <div class="table-wrap"><table>
+                <thead><tr><th>ID</th><th>Title</th><th>Doctor</th><th>Stage</th><th>Shoot Date</th><th>Publish Date</th><th>Discussion</th></tr></thead>
+                <tbody id="dash-proj-tbody"></tbody>
+              </table></div>
+            </div>
+          </div>
+
+          <!-- PROJECTS -->
+          <div class="page-content" id="page-projects">
+            <div class="card" style="padding:0;overflow:hidden;">
+              <div class="table-wrap"><table>
+                <thead><tr><th>ID</th><th>Title</th><th>Doctor</th><th>Stage</th><th>Anchor</th><th>DOP</th><th>Editor</th><th>Shoot</th><th>Publish</th><th>Discussion</th></tr></thead>
+                <tbody id="proj-tbody"></tbody>
+              </table></div>
+            </div>
+          </div>
+
+          <!-- DOCTORS -->
+          <div class="page-content" id="page-doctors">
+            <div class="kpi-row" style="grid-template-columns:repeat(3,1fr);">
+              <div class="kpi-card"><div class="kpi-label">Total Onboarded</div><div class="kpi-value" id="d-total" style="color:var(--pink)">—</div></div>
+              <div class="kpi-card"><div class="kpi-label">Active</div><div class="kpi-value" id="d-active" style="color:var(--green)">—</div></div>
+              <div class="kpi-card"><div class="kpi-label">Onboarding</div><div class="kpi-value" id="d-boarding" style="color:var(--amber)">—</div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;" id="doctor-grid"></div>
+          </div>
+
+          <!-- TEAM -->
+          <div class="page-content" id="page-team">
+            <div class="tabs">
+              <div class="tab active" onclick="switchTab(this,'tab-anchors')">Anchors</div>
+              <div class="tab" onclick="switchTab(this,'tab-dops')">Camera / DOP</div>
+              <div class="tab" onclick="switchTab(this,'tab-editors')">Editors</div>
+              <div class="tab" onclick="switchTab(this,'tab-publishers')">Publishing</div>
+            </div>
+            <div class="tab-c active" id="tab-anchors"><div class="card" style="padding:0;overflow:hidden;"><table><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Status</th></tr></thead><tbody id="anchors-tbody"></tbody></table></div></div>
+            <div class="tab-c" id="tab-dops"><div class="card" style="padding:0;overflow:hidden;"><table><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Status</th></tr></thead><tbody id="dops-tbody"></tbody></table></div></div>
+            <div class="tab-c" id="tab-editors"><div class="card" style="padding:0;overflow:hidden;"><table><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Status</th></tr></thead><tbody id="editors-tbody"></tbody></table></div></div>
+            <div class="tab-c" id="tab-publishers"><div class="card" style="padding:0;overflow:hidden;"><table><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Status</th></tr></thead><tbody id="publishers-tbody"></tbody></table></div></div>
+          </div>
+
+        </div><!-- /page-scroll -->
+
+        <!-- DETAIL PANEL -->
+        <div class="detail-panel" id="detail-panel">
+          <div class="dp-header">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:2px;" id="dp-id">—</div>
+              <div style="font-size:15px;font-weight:600;color:var(--text);letter-spacing:-0.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="dp-title">—</div>
+              <div style="margin-top:5px;" id="dp-badge"></div>
+            </div>
+            <div class="dp-close" onclick="closeDetail()">✕</div>
+          </div>
+          <div class="dp-tabs">
+            <div class="dp-tab active" onclick="dpTab(this,'dpt-overview')">Overview</div>
+            <div class="dp-tab" onclick="dpTab(this,'dpt-discussion')">Discussion <span id="dp-count" style="background:rgba(108,140,255,0.15);color:var(--accent);font-size:10px;padding:1px 6px;border-radius:10px;margin-left:3px;">0</span></div>
+          </div>
+          <div class="dp-tc active" id="dpt-overview">
+            <div class="stage-track" id="dp-stages"></div>
+            <div class="meta-grid" id="dp-meta"></div>
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Team</div>
+            <div id="dp-team"></div>
+          </div>
+          <div class="dp-tc" id="dpt-discussion" style="padding:0;flex:1;display:flex;flex-direction:column;position:relative;">
+            <div class="comment-thread" id="comment-thread"></div>
+            <div class="comment-input-wrap">
+              <textarea class="comment-box" id="comment-box" placeholder="Add comment… use @ to mention" rows="2" oninput="onCInput(this)"></textarea>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
+                <div class="type-chips">
+                  <div class="type-chip active" onclick="selType(this,'comment')">💬 Comment</div>
+                  <div class="type-chip" onclick="selType(this,'update')">📋 Update</div>
+                  <div class="type-chip" onclick="selType(this,'issue')">🚨 Issue</div>
+                  <div class="type-chip" onclick="selType(this,'approval')">✅ Approval</div>
+                </div>
+                <button class="send-btn" id="send-btn" onclick="sendComment()" disabled>Send</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ NEW PROJECT MODAL ══ -->
+<div id="np-modal" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);width:600px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.6);">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+      <div style="font-size:15px;font-weight:600;">New Project <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);font-weight:400;" id="np-auto-id"></span></div>
+      <div onclick="closeNP()" style="cursor:pointer;color:var(--text3);font-size:18px;">✕</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:18px 20px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" id="np-form"></div>
+    </div>
+    <div id="np-err" style="display:none;background:rgba(248,113,113,0.1);color:var(--red);font-size:12px;padding:8px 20px;border-top:1px solid rgba(248,113,113,0.2);"></div>
+    <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0;">
+      <button class="btn btn-ghost" onclick="closeNP()">Cancel</button>
+      <button class="btn btn-primary" onclick="createProject()">Create Project</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.np-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;}
+.np-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;}
+.np-input:focus{border-color:var(--accent);}
+.np-input::placeholder{color:var(--text3);}
+textarea.np-input{resize:vertical;min-height:60px;}
+</style>
+
+<script>
+// ══════════════════════════════════════════════
+// SUPABASE INIT
+// ══════════════════════════════════════════════
+const SUPA_URL = 'https://njxwfgcayotvjmozhlab.supabase.co';
+const SUPA_KEY = 'sb_publishable_Qo_hvPXG8qJfMgUZ12ILDQ_FlaZypMm';
+const { createClient } = supabase;
+const sb = createClient(SUPA_URL, SUPA_KEY);
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let currentUser = null;
+let currentMember = null;
+let allProjects = [];
+let allDoctors = [];
+let allTeam = [];
+let currentProject = null;
+let commentType = 'comment';
+let nextProjNum = 249;
+
+const STAGES = ['Concept','Pre-shoot','Shoot Scheduled','Recorded','Editing','Publishing','Distribution','Live'];
+const stageColor = {'Concept':'bg-gray','Pre-shoot':'bg-blue','Shoot Scheduled':'bg-teal','Recorded':'bg-amber','Editing':'bg-pink','Publishing':'bg-orange','Distribution':'bg-teal','Live':'bg-green'};
+const typeEmoji = {comment:'💬',update:'📋',issue:'🚨',approval:'✅'};
+const typeColor = {comment:'var(--text3)',update:'var(--accent)',issue:'var(--red)',approval:'var(--green)'};
+
+// ══════════════════════════════════════════════
+// UTILITIES
+// ══════════════════════════════════════════════
+function loader(show){ document.getElementById('loader').classList.toggle('hidden',!show); }
+function toast(msg,ok=true){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.style.borderColor=ok?'rgba(52,211,153,0.3)':'rgba(248,113,113,0.3)';
+  t.style.color=ok?'var(--green)':'var(--red)';
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+function stageBadge(s){ return `<span class="badge ${stageColor[s]||'bg-gray'}">${s}</span>`; }
+function fmtDate(d){ if(!d)return '—'; const dt=new Date(d); return dt.toLocaleDateString('en-IN',{day:'numeric',month:'short'}); }
+function initials(name){ return name?name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase():'?'; }
+
+// ══════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════
+async function doLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  const errEl=document.getElementById('login-err');
+  const loadEl=document.getElementById('login-loading');
+  errEl.style.display='none';
+  loadEl.style.display='block';
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  loadEl.style.display='none';
+  if(error){ errEl.textContent=error.message; errEl.style.display='block'; return; }
+  currentUser=data.user;
+  await initApp();
+}
+
+async function doLogout(){
+  await sb.auth.signOut();
+  currentUser=null; currentMember=null;
+  document.getElementById('app').classList.remove('ready');
+  document.getElementById('login-screen').style.display='flex';
+}
+
+document.getElementById('login-pass').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+
+// ══════════════════════════════════════════════
+// INIT APP after login
+// ══════════════════════════════════════════════
+async function initApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').classList.add('ready');
+  loader(true);
+  // Get member profile — use email match since auth not linked yet
+  const {data:member}=await sb.from('team_members').select('*').eq('email',currentUser.email).single();
+  currentMember=member;
+  if(member){
+    document.getElementById('sb-name').textContent=member.full_name;
+    document.getElementById('sb-role').textContent=member.role.replace('_',' ');
+    document.getElementById('sb-avatar').textContent=initials(member.full_name);
+    document.getElementById('sb-avatar').style.color=member.avatar_color||'var(--accent)';
+    // Show new project button only for manager/admin
+    if(['manager','admin'].includes(member.role)){
+      document.getElementById('new-proj-btn').style.display='inline-flex';
+    }
+  }
+  await Promise.all([loadProjects(),loadDoctors(),loadTeam()]);
+  renderDashboard();
+  loader(false);
+  document.getElementById('page-sub').textContent=`${new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} · Suman TV`;
+}
+
+// ══════════════════════════════════════════════
+// DATA LOADERS
+// ══════════════════════════════════════════════
+async function loadProjects(){
+  const {data,error}=await sb.from('projects').select(`
+    *,
+    doctor:doctor_id(full_name,specialty,hospital),
+    anchor:anchor_id(full_name),
+    dop:dop_id(full_name),
+    editor:editor_id(full_name),
+    publisher:publisher_id(full_name),
+    comments:project_comments(id)
+  `).order('created_at',{ascending:false});
+  if(!error) allProjects=data||[];
+  // get next project num
+  if(allProjects.length){
+    const nums=allProjects.map(p=>parseInt(p.project_id.replace('STV-',''))||0);
+    nextProjNum=Math.max(...nums)+1;
+  }
+}
+
+async function loadDoctors(){
+  const {data,error}=await sb.from('doctors').select('*').order('doctor_id');
+  if(!error) allDoctors=data||[];
+}
+
+async function loadTeam(){
+  const {data,error}=await sb.from('team_members').select('*').order('role,full_name');
+  if(!error) allTeam=data||[];
+}
+
+async function loadComments(projectId){
+  const {data}=await sb.from('project_comments').select(`
+    *,
+    author:author_id(full_name,role,avatar_color)
+  `).eq('project_id',projectId).order('created_at');
+  return data||[];
+}
+
+// ══════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════
+const pageInfo={
+  dashboard:{title:'Production Dashboard'},
+  projects:{title:'All Projects'},
+  doctors:{title:'Doctor Directory'},
+  team:{title:'Team Management'},
+};
+function nav(id,el){
+  document.querySelectorAll('.page-content').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('page-title').textContent=pageInfo[id].title;
+  closeDetail();
+  if(id==='dashboard') renderDashboard();
+  if(id==='projects') renderProjects(allProjects);
+  if(id==='doctors') renderDoctors();
+  if(id==='team') renderTeam();
+}
+function switchTab(el,id){
+  el.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  el.closest('.page-content').querySelectorAll('.tab-c').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function dpTab(el,id){
+  el.closest('.dp-tabs').querySelectorAll('.dp-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.dp-tc').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ══════════════════════════════════════════════
+// DASHBOARD RENDER
+// ══════════════════════════════════════════════
+function renderDashboard(){
+  const total=allProjects.length;
+  const live=allProjects.filter(p=>p.stage==='Live').length;
+  const active=total-live;
+  const docActive=allDoctors.filter(d=>d.onboard_status==='Active').length;
+  document.getElementById('kpi-total').textContent=total;
+  document.getElementById('kpi-active').textContent=active;
+  document.getElementById('kpi-live').textContent=live;
+  document.getElementById('kpi-doctors').textContent=docActive;
+  document.getElementById('kpi-team').textContent=allTeam.length;
+  // Pipeline
+  const stageColors=['var(--text3)','var(--accent)','var(--amber)','var(--orange)','var(--pink)','var(--accent2)','var(--teal)','var(--green)'];
+  document.getElementById('pipeline-row').innerHTML=STAGES.map((s,i)=>{
+    const count=allProjects.filter(p=>p.stage===s).length;
+    return `<div class="ps"><div class="ps-d" style="background:${stageColors[i]}"></div><div class="ps-n" style="color:${stageColors[i]}">${count}</div><div class="ps-l">${s}</div></div>`;
+  }).join('');
+  // Recent projects (last 8)
+  const recent=allProjects.slice(0,8);
+  document.getElementById('recent-count').textContent=recent.length;
+  renderProjRows('dash-proj-tbody',recent,true);
+}
+
+// ══════════════════════════════════════════════
+// PROJECTS RENDER
+// ══════════════════════════════════════════════
+function renderProjects(list){
+  renderProjRows('proj-tbody',list,false);
+}
+function renderProjRows(tbodyId,list,compact){
+  const tbody=document.getElementById(tbodyId);
+  if(!list.length){
+    const cols=compact?7:10;
+    tbody.innerHTML=`<tr><td colspan="${cols}"><div class="empty"><div class="e-icon">📋</div><div class="e-title">No projects yet</div><div class="e-sub">Create a new project to get started</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML=list.map(p=>{
+    const stIdx=STAGES.indexOf(p.stage);
+    const pills=STAGES.slice(0,6).map((_,i)=>`<div style="width:16px;height:4px;border-radius:2px;background:${i<=stIdx?'var(--accent)':'var(--bg4)'}"></div>`).join('');
+    const commentCount=p.comments?.length||0;
+    const docName=p.doctor?.full_name||'—';
+    if(compact){
+      return `<tr class="clickable" onclick="openDetail('${p.id}')">
+        <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);">${p.project_id}</td>
+        <td class="td-p">${p.title}</td>
+        <td style="font-size:12px;">${docName}</td>
+        <td>${stageBadge(p.stage)}</td>
+        <td style="font-size:11px;">${fmtDate(p.shoot_date)}</td>
+        <td style="font-size:11px;">${fmtDate(p.publish_date)}</td>
+        <td><span style="cursor:pointer;font-size:12px;color:var(--text3);" onclick="event.stopPropagation();openDiscussion('${p.id}')">💬 ${commentCount}</span></td>
+      </tr>`;
+    }
+    return `<tr class="clickable" onclick="openDetail('${p.id}')">
+      <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);">${p.project_id}</td>
+      <td class="td-p">${p.title}</td>
+      <td style="font-size:12px;">${docName}</td>
+      <td>${stageBadge(p.stage)}</td>
+      <td style="font-size:12px;">${p.anchor?.full_name||'—'}</td>
+      <td style="font-size:12px;">${p.dop?.full_name||'—'}</td>
+      <td style="font-size:12px;">${p.editor?.full_name||'—'}</td>
+      <td style="font-size:11px;">${fmtDate(p.shoot_date)}</td>
+      <td style="font-size:11px;">${fmtDate(p.publish_date)}</td>
+      <td><span style="cursor:pointer;font-size:12px;color:var(--text3);" onclick="event.stopPropagation();openDiscussion('${p.id}')">💬 ${commentCount}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function searchProj(q){
+  const filtered=q?allProjects.filter(p=>
+    p.title.toLowerCase().includes(q.toLowerCase())||
+    p.project_id.toLowerCase().includes(q.toLowerCase())||
+    (p.doctor?.full_name||'').toLowerCase().includes(q.toLowerCase())
+  ):allProjects;
+  const active=document.querySelector('.page-content.active').id;
+  if(active==='page-dashboard') renderProjRows('dash-proj-tbody',filtered.slice(0,8),true);
+  if(active==='page-projects') renderProjRows('proj-tbody',filtered,false);
+}
+
+// ══════════════════════════════════════════════
+// DOCTORS RENDER
+// ══════════════════════════════════════════════
+function renderDoctors(){
+  const total=allDoctors.length;
+  const active=allDoctors.filter(d=>d.onboard_status==='Active').length;
+  const boarding=allDoctors.filter(d=>d.onboard_status==='Onboarding').length;
+  document.getElementById('d-total').textContent=total;
+  document.getElementById('d-active').textContent=active;
+  document.getElementById('d-boarding').textContent=boarding;
+  const colors=['var(--accent)','var(--pink)','var(--teal)','var(--amber)','var(--green)','var(--orange)','var(--accent2)'];
+  document.getElementById('doctor-grid').innerHTML=allDoctors.map((d,i)=>`
+    <div class="doctor-card">
+      <div class="doctor-header">
+        <div class="doc-av" style="background:${colors[i%colors.length]}22;color:${colors[i%colors.length]}">${initials(d.full_name.replace('Dr. ',''))}</div>
+        <div><div style="font-size:13px;font-weight:500;color:var(--text);">${d.full_name}</div><div style="font-size:11px;color:var(--text3);">${d.specialty} · ${d.hospital||'—'}</div></div>
+      </div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;">
+        <span class="badge ${d.onboard_status==='Active'?'bg-green':'bg-amber'}">${d.onboard_status}</span>
+        <span class="badge bg-blue">${d.shoot_days_per_week||4} days/wk</span>
+        <span class="badge bg-gray">${d.city||'Hyderabad'}</span>
+      </div>
+    </div>
+  `).join('')||'<div class="empty"><div class="e-icon">👨‍⚕️</div><div class="e-title">No doctors yet</div></div>';
+}
+
+// ══════════════════════════════════════════════
+// TEAM RENDER
+// ══════════════════════════════════════════════
+function renderTeam(){
+  const roleMap={anchor:'anchors-tbody',dop:'dops-tbody',editor:'editors-tbody',publisher:'publishers-tbody'};
+  Object.values(roleMap).forEach(id=>document.getElementById(id).innerHTML='');
+  allTeam.forEach((m,i)=>{
+    const tbId=roleMap[m.role]; if(!tbId) return;
+    document.getElementById(tbId).innerHTML+=`<tr>
+      <td style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);">${i+1}</td>
+      <td class="td-p">${m.full_name}</td>
+      <td style="font-size:12px;">${m.email}</td>
+      <td><span class="badge ${m.is_active?'bg-green':'bg-gray'}">${m.is_active?'Active':'Inactive'}</span></td>
+    </tr>`;
+  });
+}
+
+// ══════════════════════════════════════════════
+// DETAIL PANEL
+// ══════════════════════════════════════════════
+async function openDetail(projId){
+  const p=allProjects.find(x=>x.id===projId);
+  if(!p) return;
+  currentProject=p;
+  document.getElementById('dp-id').textContent=p.project_id;
+  document.getElementById('dp-title').textContent=p.title;
+  document.getElementById('dp-badge').innerHTML=stageBadge(p.stage)+` <span class="badge bg-pink" style="margin-left:4px;">${p.doctor?.specialty||'—'}</span>`;
+  // Stage tracker
+  const stIdx=STAGES.indexOf(p.stage);
+  document.getElementById('dp-stages').innerHTML=STAGES.map((s,i)=>{
+    const cls=i<stIdx?'done':i===stIdx?'cur':'todo';
+    const short=['Con','Pre','Sht','Rec','Edit','Pub','Dist','Live'][i];
+    return `<div class="st-step"><div class="st-dot ${cls}">${i<stIdx?'✓':i+1}</div><div class="st-label">${short}</div></div>`;
+  }).join('');
+  // Meta
+  document.getElementById('dp-meta').innerHTML=[
+    ['Doctor',p.doctor?.full_name||'—'],
+    ['Hospital',p.doctor?.hospital||'—'],
+    ['Shoot Date',fmtDate(p.shoot_date)],
+    ['Publish Date',fmtDate(p.publish_date)],
+    ['Category',p.category||'—'],
+    ['Created',fmtDate(p.created_at)],
+  ].map(([l,v])=>`<div class="meta-item"><div class="meta-label">${l}</div><div class="meta-value">${v}</div></div>`).join('');
+  // Team
+  document.getElementById('dp-team').innerHTML=[
+    {label:'Anchor',name:p.anchor?.full_name,color:'#a78bfa'},
+    {label:'DOP',name:p.dop?.full_name,color:'#22d3ee'},
+    {label:'Editor',name:p.editor?.full_name,color:'#f472b6'},
+    {label:'Publisher',name:p.publisher?.full_name,color:'#fb923c'},
+  ].map(m=>`<div style="display:flex;align-items:center;gap:9px;padding:6px 0;border-bottom:1px solid var(--border);">
+    <div style="width:26px;height:26px;border-radius:50%;background:${m.color}22;color:${m.color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0;">${initials(m.name||'?')}</div>
+    <div><div style="font-size:12px;color:var(--text);font-weight:500;">${m.name||'Not assigned'}</div><div style="font-size:11px;color:var(--text3);">${m.label}</div></div>
+  </div>`).join('');
+  // Load comments
+  await renderComments(projId);
+  document.getElementById('detail-panel').classList.add('open');
+  document.querySelectorAll('.dp-tab').forEach((t,i)=>t.classList.toggle('active',i===0));
+  document.querySelectorAll('.dp-tc').forEach((t,i)=>t.classList.toggle('active',i===0));
+}
+
+function openDiscussion(projId){
+  openDetail(projId).then(()=>{
+    setTimeout(()=>dpTab(document.querySelectorAll('.dp-tab')[1],'dpt-discussion'),100);
+  });
+}
+
+function closeDetail(){
+  document.getElementById('detail-panel').classList.remove('open');
+  currentProject=null;
+}
+
+// ══════════════════════════════════════════════
+// COMMENTS
+// ══════════════════════════════════════════════
+async function renderComments(projId){
+  const comments=await loadComments(projId);
+  document.getElementById('dp-count').textContent=comments.length;
+  const thread=document.getElementById('comment-thread');
+  if(!comments.length){
+    thread.innerHTML=`<div class="empty" style="padding:30px 16px;"><div class="e-icon">💬</div><div class="e-title">No comments yet</div><div class="e-sub">Post updates, issues or approvals below.</div></div>`;
+    return;
+  }
+  thread.innerHTML=comments.map(c=>`
+    <div class="c-item">
+      <div class="c-av" style="background:${c.author?.avatar_color||'#6c8cff'}22;color:${c.author?.avatar_color||'#6c8cff'}">${initials(c.author?.full_name||'?')}</div>
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+          <span class="c-name">${c.author?.full_name||'Unknown'}</span>
+          <span class="c-role">${c.author?.role?.replace('_',' ')||''}</span>
+          <span class="c-type" style="background:${typeColor[c.comment_type]}22;color:${typeColor[c.comment_type]}">${typeEmoji[c.comment_type]||''} ${c.comment_type}</span>
+          <span class="c-time">${new Date(c.created_at).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} · ${new Date(c.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</span>
+        </div>
+        <div class="c-text">${c.body}</div>
+      </div>
+    </div>
+  `).join('')+'<div style="height:4px;"></div>';
+  setTimeout(()=>thread.scrollTop=thread.scrollHeight,50);
+}
+
+function onCInput(el){
+  document.getElementById('send-btn').disabled=el.value.trim().length===0;
+}
+function selType(el,type){
+  el.closest('.type-chips').querySelectorAll('.type-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  commentType=type;
+}
+
+async function sendComment(){
+  const box=document.getElementById('comment-box');
+  const text=box.value.trim();
+  if(!text||!currentProject||!currentMember) return;
+  const btn=document.getElementById('send-btn');
+  btn.disabled=true;
+  const {error}=await sb.from('project_comments').insert({
+    project_id:currentProject.id,
+    author_id:currentMember.id,
+    comment_type:commentType,
+    body:text,
+  });
+  if(error){ toast('Failed to send: '+error.message,false); btn.disabled=false; return; }
+  box.value='';
+  await renderComments(currentProject.id);
+  toast('Comment posted ✓');
+}
+
+// ══════════════════════════════════════════════
+// NEW PROJECT MODAL
+// ══════════════════════════════════════════════
+function openNewProjModal(){
+  const pid='STV-'+String(nextProjNum).padStart(3,'0');
+  document.getElementById('np-auto-id').textContent='→ '+pid;
+  const anchors=allTeam.filter(m=>m.role==='anchor');
+  const dops=allTeam.filter(m=>m.role==='dop');
+  const editors=allTeam.filter(m=>m.role==='editor');
+  const publishers=allTeam.filter(m=>m.role==='publisher');
+  const mkSel=(id,label,opts)=>`<div><div class="np-label">${label}</div><select class="np-input" id="${id}"><option value="">Select…</option>${opts.map(o=>`<option value="${o.id}">${o.full_name}</option>`).join('')}</select></div>`;
+  const mkDoc=`<div style="grid-column:1/-1;"><div class="np-label">Doctor *</div><select class="np-input" id="np-doc"><option value="">Select doctor…</option>${allDoctors.map(d=>`<option value="${d.id}">${d.full_name} — ${d.specialty}</option>`).join('')}</select></div>`;
+  document.getElementById('np-form').innerHTML=`
+    ${mkDoc}
+    <div><div class="np-label">Title *</div><input class="np-input" id="np-title" type="text" placeholder="e.g. Heart Health Myths Busted"></div>
+    <div><div class="np-label">Category</div><select class="np-input" id="np-cat"><option>Health Education</option><option>Doctor Interview</option><option>Patient Awareness</option><option>Procedure Explainer</option><option>Q&A Session</option></select></div>
+    ${mkSel('np-anchor','Anchor *',anchors)}
+    ${mkSel('np-dop','DOP / Camera *',dops)}
+    ${mkSel('np-editor','Editor *',editors)}
+    ${mkSel('np-publisher','Publisher *',publishers)}
+    <div><div class="np-label">Shoot Date *</div><input class="np-input" id="np-shoot" type="date"></div>
+    <div><div class="np-label">Publish Date</div><input class="np-input" id="np-publish" type="date"></div>
+    <div style="grid-column:1/-1;"><div class="np-label">Concept Notes</div><textarea class="np-input" id="np-notes" placeholder="Key topics, talking points…"></textarea></div>
+  `;
+  document.getElementById('np-err').style.display='none';
+  document.getElementById('np-modal').style.display='flex';
+}
+function closeNP(){ document.getElementById('np-modal').style.display='none'; }
+
+async function createProject(){
+  const title=document.getElementById('np-title').value.trim();
+  const docId=document.getElementById('np-doc').value;
+  const anchorId=document.getElementById('np-anchor').value;
+  const dopId=document.getElementById('np-dop').value;
+  const editorId=document.getElementById('np-editor').value;
+  const publisherId=document.getElementById('np-publisher').value;
+  const shoot=document.getElementById('np-shoot').value;
+  const publish=document.getElementById('np-publish').value;
+  const cat=document.getElementById('np-cat').value;
+  const notes=document.getElementById('np-notes').value.trim();
+  const errEl=document.getElementById('np-err');
+  if(!title||!docId||!anchorId||!dopId||!editorId||!publisherId||!shoot){
+    errEl.textContent='Please fill all required fields (*)'; errEl.style.display='block'; return;
+  }
+  const pid='STV-'+String(nextProjNum).padStart(3,'0');
+  loader(true);
+  const {data,error}=await sb.from('projects').insert({
+    project_id:pid, title, category:cat,
+    doctor_id:docId, anchor_id:anchorId, dop_id:dopId,
+    editor_id:editorId, publisher_id:publisherId,
+    stage:'Concept', shoot_date:shoot||null,
+    publish_date:publish||null, concept_notes:notes||null,
+    created_by:currentMember?.id||null,
+  }).select(`*,doctor:doctor_id(full_name,specialty,hospital),anchor:anchor_id(full_name),dop:dop_id(full_name),editor:editor_id(full_name),publisher:publisher_id(full_name),comments:project_comments(id)`);
+  loader(false);
+  if(error){ errEl.textContent=error.message; errEl.style.display='block'; return; }
+  nextProjNum++;
+  allProjects.unshift(data[0]);
+  closeNP();
+  renderDashboard();
+  if(document.getElementById('page-projects').classList.contains('active')) renderProjects(allProjects);
+  toast(`✅ ${pid} created — ${title}`);
+}
+
+// ══════════════════════════════════════════════
+// CHECK SESSION ON LOAD
+// ══════════════════════════════════════════════
+(async()=>{
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){
+    currentUser=session.user;
+    await initApp();
+  }
+})();
+</script>
+</body>
+</html>
