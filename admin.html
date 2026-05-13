@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suman TV — Admin Panel</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d0f14;--bg2:#13161e;--bg3:#1a1e29;--bg4:#222736;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#e8eaf0;--text2:#8b90a0;--text3:#555c70;
+  --accent:#6c8cff;--accent2:#a78bfa;
+  --green:#34d399;--amber:#fbbf24;--red:#f87171;
+  --teal:#22d3ee;--pink:#f472b6;--orange:#fb923c;
+  --r:10px;--rl:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.5;min-height:100vh;}
+
+/* ── LAYOUT ── */
+.shell{display:flex;min-height:100vh;}
+.sidebar{width:230px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;}
+.main{margin-left:230px;flex:1;min-height:100vh;}
+
+/* ── SIDEBAR ── */
+.sb-logo{padding:18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.sb-icon{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0;}
+.sb-brand{font-size:14px;font-weight:600;}
+.sb-sub{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;}
+.sb-section{padding:10px 16px 3px;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;font-weight:500;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 16px;cursor:pointer;color:var(--text2);font-size:13px;transition:all 0.15s;position:relative;}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,0.04);}
+.nav-item.active{color:var(--accent);background:rgba(108,140,255,0.08);}
+.nav-item.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--accent);}
+.nav-icon{font-size:15px;width:18px;text-align:center;}
+.sb-footer{padding:14px 16px;border-top:1px solid var(--border);margin-top:auto;}
+.sb-user{display:flex;align-items:center;gap:8px;}
+.sb-avatar{width:28px;height:28px;border-radius:50%;background:rgba(108,140,255,0.2);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;}
+.sb-uname{font-size:12px;font-weight:500;flex:1;}
+.sb-urole{font-size:10px;color:var(--text3);}
+.logout-btn{font-size:11px;color:var(--text3);cursor:pointer;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;}
+.logout-btn:hover{color:var(--red);border-color:rgba(248,113,113,0.3);}
+.back-btn{display:flex;align-items:center;gap:6px;padding:10px 16px;font-size:12px;color:var(--text3);cursor:pointer;border-top:1px solid var(--border);}
+.back-btn:hover{color:var(--text);}
+
+/* ── TOP BAR ── */
+.topbar{padding:16px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg);position:sticky;top:0;z-index:10;}
+.page-title{font-size:17px;font-weight:600;letter-spacing:-0.3px;}
+.page-sub{font-size:12px;color:var(--text2);margin-top:1px;}
+
+/* ── CONTENT ── */
+.page-wrap{padding:24px 28px;}
+.page{display:none;}
+.page.active{display:block;}
+
+/* ── STATS ROW ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;}
+.stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;}
+.stat-val{font-size:22px;font-weight:600;font-family:'DM Mono',monospace;line-height:1;}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:4px;}
+
+/* ── SEARCH + FILTER BAR ── */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.search-input{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;width:240px;}
+.search-input:focus{border-color:var(--accent);}
+.search-input::placeholder{color:var(--text3);}
+.filter-chip{padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid var(--border);color:var(--text3);background:var(--bg2);transition:all 0.15s;}
+.filter-chip:hover{color:var(--text);border-color:var(--border2);}
+.filter-chip.active{background:rgba(108,140,255,0.12);color:var(--accent);border-color:rgba(108,140,255,0.4);}
+.ml-auto{margin-left:auto;}
+
+/* ── BUTTONS ── */
+.btn{padding:7px 14px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:none;transition:all 0.15s;font-weight:500;display:inline-flex;align-items:center;gap:6px;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{opacity:0.88;}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text2);}
+.btn-ghost:hover{color:var(--text);background:var(--bg3);}
+.btn-danger{background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.2);color:var(--red);}
+.btn-danger:hover{background:rgba(248,113,113,0.2);}
+.btn-sm{padding:4px 10px;font-size:12px;}
+.btn-success{background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.2);color:var(--green);}
+
+/* ── CARDS GRID ── */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+.person-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;transition:border 0.15s;}
+.person-card:hover{border-color:var(--border2);}
+.card-photo-wrap{position:relative;height:140px;background:var(--bg3);display:flex;align-items:center;justify-content:center;}
+.card-photo{width:100%;height:100%;object-fit:cover;}
+.card-photo-placeholder{width:70px;height:70px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:600;background:rgba(108,140,255,0.15);color:var(--accent);}
+.card-edit-btn{position:absolute;top:8px;right:8px;background:rgba(13,15,20,0.8);border:1px solid var(--border2);border-radius:6px;padding:4px 9px;font-size:11px;color:var(--text2);cursor:pointer;transition:all 0.15s;}
+.card-edit-btn:hover{color:var(--text);background:rgba(13,15,20,0.95);}
+.card-body{padding:14px;}
+.card-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;}
+.card-meta{font-size:12px;color:var(--text3);margin-bottom:10px;}
+.card-badges{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;}
+.bg-green{background:rgba(52,211,153,0.12);color:var(--green);}
+.bg-amber{background:rgba(251,191,36,0.12);color:var(--amber);}
+.bg-blue{background:rgba(108,140,255,0.12);color:var(--accent);}
+.bg-gray{background:var(--bg4);color:var(--text3);}
+.bg-pink{background:rgba(244,114,182,0.12);color:var(--pink);}
+.bg-teal{background:rgba(34,211,238,0.12);color:var(--teal);}
+.social-links{display:flex;gap:6px;flex-wrap:wrap;}
+.social-link{width:26px;height:26px;border-radius:6px;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;text-decoration:none;color:var(--text3);transition:all 0.15s;cursor:pointer;}
+.social-link:hover{background:var(--bg4);color:var(--text);}
+.social-link.yt:hover{color:#ff4444;}
+.social-link.ig:hover{color:#e1306c;}
+.social-link.fb:hover{color:#1877f2;}
+.social-link.tw:hover{color:#1da1f2;}
+.social-link.li:hover{color:#0a66c2;}
+.social-link.wa:hover{color:#25d366;}
+.social-link.web:hover{color:var(--accent);}
+
+/* ── TABLE VIEW ── */
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;padding:9px 12px;color:var(--text3);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg2);}
+td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,0.015);}
+.td-p{color:var(--text)!important;font-weight:500;}
+.avatar-sm{width:32px;height:32px;border-radius:50%;object-fit:cover;background:var(--bg3);border:1px solid var(--border);}
+.avatar-sm-placeholder{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;}
+
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);width:680px;max-width:100%;box-shadow:0 24px 64px rgba(0,0,0,0.6);}
+.modal-header{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-title{font-size:16px;font-weight:600;}
+.modal-close{width:28px;height:28px;border-radius:6px;background:var(--bg3);border:1px solid var(--border);color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.modal-close:hover{color:var(--text);}
+.modal-body{padding:22px;}
+.modal-footer{padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+
+/* ── FORM ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.form-grid .full{grid-column:1/-1;}
+.field{display:flex;flex-direction:column;gap:5px;}
+.field label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;font-weight:500;}
+.field input,.field select,.field textarea{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:border 0.15s;width:100%;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);}
+.field input::placeholder,.field textarea::placeholder{color:var(--text3);}
+.field textarea{resize:vertical;min-height:70px;}
+.field select option{background:var(--bg3);}
+.section-divider{grid-column:1/-1;border:none;border-top:1px solid var(--border);margin:4px 0;}
+.section-heading{grid-column:1/-1;font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-top:4px;}
+
+/* ── PHOTO UPLOAD ── */
+.photo-upload-area{grid-column:1/-1;display:flex;align-items:center;gap:16px;}
+.photo-preview{width:80px;height:80px;border-radius:50%;object-fit:cover;background:var(--bg3);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--text3);flex-shrink:0;overflow:hidden;}
+.photo-preview img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.photo-upload-info{flex:1;}
+.photo-upload-info p{font-size:12px;color:var(--text3);margin-top:4px;}
+.upload-btn-label{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid var(--border2);color:var(--text2);background:transparent;font-family:'DM Sans',sans-serif;font-weight:500;transition:all 0.15s;}
+.upload-btn-label:hover{color:var(--text);background:var(--bg3);}
+#photo-file-input{display:none;}
+
+/* ── PROGRESS / STATUS ── */
+.upload-progress{display:none;margin-top:8px;}
+.progress-bar{background:var(--bg4);border-radius:4px;height:4px;overflow:hidden;}
+.progress-fill{height:100%;background:var(--accent);border-radius:4px;transition:width 0.3s;}
+.upload-status{font-size:11px;color:var(--text3);margin-top:4px;}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--bg3);border:1px solid rgba(52,211,153,0.3);color:var(--green);font-size:13px;padding:9px 18px;border-radius:30px;opacity:0;transition:all 0.3s;z-index:200;pointer-events:none;white-space:nowrap;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#toast.error{border-color:rgba(248,113,113,0.3);color:var(--red);}
+
+/* ── LOADING ── */
+.loader-overlay{position:fixed;inset:0;background:rgba(13,15,20,0.7);display:flex;align-items:center;justify-content:center;z-index:150;backdrop-filter:blur(3px);}
+.loader-overlay.hidden{display:none;}
+.spinner{width:30px;height:30px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── LOGIN ── */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;}
+.login-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);padding:36px 40px;width:380px;}
+.login-logo{display:flex;align-items:center;gap:12px;margin-bottom:28px;}
+.login-title{font-size:20px;font-weight:600;margin-bottom:6px;}
+.login-sub{font-size:13px;color:var(--text2);margin-bottom:24px;}
+.lfield{margin-bottom:14px;}
+.lfield label{display:block;font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;}
+.lfield input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;}
+.lfield input:focus{border-color:var(--accent);}
+.lfield input::placeholder{color:var(--text3);}
+.login-btn{width:100%;padding:11px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;}
+.login-btn:hover{opacity:0.88;}
+.login-err{background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.2);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--red);margin-top:10px;display:none;}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:48px 20px;color:var(--text3);}
+.empty .ei{font-size:36px;margin-bottom:10px;}
+.empty .et{font-size:14px;font-weight:500;color:var(--text2);margin-bottom:4px;}
+
+/* ── VIEW TOGGLE ── */
+.view-toggle{display:flex;background:var(--bg3);border-radius:7px;padding:2px;}
+.vt-btn{padding:4px 10px;border-radius:5px;font-size:12px;cursor:pointer;color:var(--text3);transition:all 0.15s;border:none;background:transparent;font-family:'DM Sans',sans-serif;}
+.vt-btn.active{background:var(--bg4);color:var(--text);}
+
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.page.active{animation:fadeIn 0.2s ease;}
+</style>
+</head>
+<body>
+
+<div class="loader-overlay hidden" id="loader"><div class="spinner"></div></div>
+<div id="toast"></div>
+
+<!-- ══ LOGIN ══ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#6c8cff,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;">S</div>
+      <div><div style="font-size:15px;font-weight:600;">Suman TV</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;">Admin Panel</div></div>
+    </div>
+    <div class="login-title">Admin Sign In</div>
+    <div class="login-sub">Managers only. Use your Suman TV credentials.</div>
+    <div class="lfield"><label>Email</label><input type="email" id="l-email" placeholder="manager@sumantv.in" autocomplete="email"></div>
+    <div class="lfield"><label>Password</label><input type="password" id="l-pass" placeholder="••••••••"></div>
+    <button class="login-btn" onclick="doLogin()">Sign in →</button>
+    <div class="login-err" id="l-err"></div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div class="shell" id="app" style="display:none;">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-icon">S</div>
+      <div><div class="sb-brand">Suman TV</div><div class="sb-sub">Admin Panel</div></div>
+    </div>
+    <nav style="flex:1;overflow-y:auto;">
+      <div class="sb-section">Manage</div>
+      <div class="nav-item active" onclick="nav('doctors',this)"><span class="nav-icon">👨‍⚕️</span><span>Doctors</span></div>
+      <div class="nav-item" onclick="nav('team',this)"><span class="nav-icon">👥</span><span>Team Members</span></div>
+      <div class="sb-section">Quick Links</div>
+      <div class="nav-item" onclick="window.open('index.html')"><span class="nav-icon">📊</span><span>Main Dashboard</span></div>
+    </nav>
+    <div class="back-btn" onclick="window.open('index.html')">← Back to Dashboard</div>
+    <div class="sb-footer">
+      <div class="sb-user">
+        <div class="sb-avatar" id="sb-av">?</div>
+        <div style="flex:1;min-width:0;">
+          <div class="sb-uname" id="sb-name">—</div>
+          <div class="sb-urole" id="sb-role">—</div>
+        </div>
+        <button class="logout-btn" onclick="doLogout()">Out</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="page-title" id="pg-title">Doctor Management</div>
+        <div class="page-sub" id="pg-sub">Add, edit and manage all doctors</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" id="add-btn" onclick="openAddModal()">+ Add New</button>
+      </div>
+    </div>
+
+    <div class="page-wrap">
+
+      <!-- ══ DOCTORS PAGE ══ -->
+      <div class="page active" id="page-doctors">
+        <div class="stats-row" id="doc-stats"></div>
+        <div class="toolbar">
+          <input class="search-input" type="text" placeholder="Search doctors…" oninput="filterDoctors(this.value)" id="doc-search">
+          <div class="filter-chip active" onclick="docFilter(this,'all')">All</div>
+          <div class="filter-chip" onclick="docFilter(this,'Active')">Active</div>
+          <div class="filter-chip" onclick="docFilter(this,'Onboarding')">Onboarding</div>
+          <div class="filter-chip" onclick="docFilter(this,'Inactive')">Inactive</div>
+          <div class="ml-auto view-toggle">
+            <button class="vt-btn active" onclick="setView('card',this)" id="vt-card">⊞ Cards</button>
+            <button class="vt-btn" onclick="setView('table',this)" id="vt-table">☰ Table</button>
+          </div>
+        </div>
+        <div id="doc-cards" class="cards-grid"></div>
+        <div id="doc-table" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;">
+          <div class="table-wrap"><table>
+            <thead><tr><th></th><th>ID</th><th>Name</th><th>Specialty</th><th>Hospital</th><th>Status</th><th>Social</th><th>Actions</th></tr></thead>
+            <tbody id="doc-tbody"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- ══ TEAM PAGE ══ -->
+      <div class="page" id="page-team">
+        <div class="stats-row" id="team-stats"></div>
+        <div class="toolbar">
+          <input class="search-input" type="text" placeholder="Search team…" oninput="filterTeam(this.value)">
+          <div class="filter-chip active" onclick="teamFilter(this,'all')">All</div>
+          <div class="filter-chip" onclick="teamFilter(this,'anchor')">Anchors</div>
+          <div class="filter-chip" onclick="teamFilter(this,'dop')">Camera</div>
+          <div class="filter-chip" onclick="teamFilter(this,'editor')">Editors</div>
+          <div class="filter-chip" onclick="teamFilter(this,'publisher')">Publishers</div>
+          <div class="filter-chip" onclick="teamFilter(this,'manager')">Managers</div>
+        </div>
+        <div id="team-cards" class="cards-grid"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══ DOCTOR MODAL ══ -->
+<div class="modal-overlay" id="doc-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="doc-modal-title">Add New Doctor</div>
+      <div class="modal-close" onclick="closeModal('doc-modal')">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <!-- Photo Upload -->
+        <div class="photo-upload-area">
+          <div class="photo-preview" id="doc-photo-preview">👨‍⚕️</div>
+          <div class="photo-upload-info">
+            <label class="upload-btn-label" for="doc-photo-input">📷 Upload Photo</label>
+            <input type="file" id="doc-photo-input" accept="image/*" onchange="handlePhotoSelect(this,'doc')">
+            <p>JPG, PNG or WebP. Max 2MB.<br>Photo will be saved to Supabase storage.</p>
+            <div class="upload-progress" id="doc-upload-progress">
+              <div class="progress-bar"><div class="progress-fill" id="doc-progress-fill" style="width:0%"></div></div>
+              <div class="upload-status" id="doc-upload-status">Uploading…</div>
+            </div>
+          </div>
+        </div>
+        <hr class="section-divider">
+        <div class="section-heading">Basic Information</div>
+        <div class="field"><label>Doctor ID *</label><input type="text" id="d-id" placeholder="STV-DR-013"></div>
+        <div class="field"><label>Full Name *</label><input type="text" id="d-name" placeholder="Dr. Full Name"></div>
+        <div class="field"><label>Specialty *</label>
+          <select id="d-specialty">
+            <option value="">Select specialty…</option>
+            <option>Cardiology</option><option>Neurology</option><option>Orthopedics</option>
+            <option>Pediatrics</option><option>Dermatology</option><option>Gastroenterology</option>
+            <option>ENT</option><option>Ophthalmology</option><option>Psychiatry</option>
+            <option>Pulmonology</option><option>Oncology</option><option>Nephrology</option>
+            <option>Endocrinology</option><option>Urology</option><option>Gynecology</option>
+            <option>Rheumatology</option><option>Diabetology</option><option>General Medicine</option>
+            <option>Surgery</option><option>Radiology</option><option>Anesthesiology</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field"><label>Hospital / Clinic</label><input type="text" id="d-hospital" placeholder="Apollo Hospitals"></div>
+        <div class="field"><label>City</label><input type="text" id="d-city" placeholder="Hyderabad"></div>
+        <div class="field"><label>Phone</label><input type="text" id="d-phone" placeholder="+91 98765 43210"></div>
+        <div class="field"><label>Email</label><input type="email" id="d-email" placeholder="doctor@hospital.com"></div>
+        <div class="field"><label>Experience (Years)</label><input type="number" id="d-exp" placeholder="15" min="0" max="60"></div>
+        <div class="field"><label>Shoot Days / Week</label>
+          <select id="d-days"><option value="1">1 day</option><option value="2">2 days</option><option value="3">3 days</option><option value="4" selected>4 days</option><option value="5">5 days</option></select>
+        </div>
+        <div class="field"><label>Status</label>
+          <select id="d-status"><option value="Active">Active</option><option value="Onboarding">Onboarding</option><option value="Inactive">Inactive</option></select>
+        </div>
+        <div class="field"><label>Languages Spoken</label><input type="text" id="d-lang" placeholder="Telugu, English, Hindi"></div>
+        <div class="field full"><label>Bio / About</label><textarea id="d-bio" placeholder="Short introduction about the doctor, their expertise and experience…"></textarea></div>
+        <hr class="section-divider">
+        <div class="section-heading">📱 Social Media & Online Presence</div>
+        <div class="field"><label>▶ YouTube Channel URL</label><input type="url" id="d-yt" placeholder="https://youtube.com/@doctorname"></div>
+        <div class="field"><label>📸 Instagram URL</label><input type="url" id="d-ig" placeholder="https://instagram.com/doctorname"></div>
+        <div class="field"><label>👤 Facebook URL</label><input type="url" id="d-fb" placeholder="https://facebook.com/doctorname"></div>
+        <div class="field"><label>🐦 Twitter / X URL</label><input type="url" id="d-tw" placeholder="https://twitter.com/doctorname"></div>
+        <div class="field"><label>💼 LinkedIn URL</label><input type="url" id="d-li" placeholder="https://linkedin.com/in/doctorname"></div>
+        <div class="field"><label>💬 WhatsApp Number</label><input type="text" id="d-wa" placeholder="+91 98765 43210"></div>
+        <div class="field full"><label>🌐 Website URL</label><input type="url" id="d-web" placeholder="https://doctorname.com"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="doc-delete-btn" onclick="deleteDoctor()" style="display:none;">🗑 Delete Doctor</button>
+      <div style="display:flex;gap:8px;margin-left:auto;">
+        <button class="btn btn-ghost" onclick="closeModal('doc-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveDoctor()" id="doc-save-btn">Save Doctor</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TEAM MEMBER MODAL ══ -->
+<div class="modal-overlay" id="team-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="team-modal-title">Add Team Member</div>
+      <div class="modal-close" onclick="closeModal('team-modal')">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <!-- Photo -->
+        <div class="photo-upload-area">
+          <div class="photo-preview" id="team-photo-preview">👤</div>
+          <div class="photo-upload-info">
+            <label class="upload-btn-label" for="team-photo-input">📷 Upload Photo</label>
+            <input type="file" id="team-photo-input" accept="image/*" onchange="handlePhotoSelect(this,'team')">
+            <p>JPG, PNG or WebP. Max 2MB.</p>
+          </div>
+        </div>
+        <hr class="section-divider">
+        <div class="section-heading">Basic Information</div>
+        <div class="field"><label>Full Name *</label><input type="text" id="t-name" placeholder="Full Name"></div>
+        <div class="field"><label>Email *</label><input type="email" id="t-email" placeholder="name@sumantv.in"></div>
+        <div class="field"><label>Role *</label>
+          <select id="t-role">
+            <option value="">Select role…</option>
+            <option value="manager">Manager</option>
+            <option value="anchor">Anchor</option>
+            <option value="dop">DOP / Camera</option>
+            <option value="editor">Editor</option>
+            <option value="publisher">Publisher</option>
+            <option value="concept_writer">Concept Writer</option>
+            <option value="distributor">Distributor</option>
+          </select>
+        </div>
+        <div class="field"><label>Department</label><input type="text" id="t-dept" placeholder="e.g. Editing"></div>
+        <div class="field"><label>Phone</label><input type="text" id="t-phone" placeholder="+91 98765 43210"></div>
+        <div class="field"><label>Join Date</label><input type="date" id="t-join"></div>
+        <div class="field"><label>Status</label>
+          <select id="t-active">
+            <option value="true">Active</option>
+            <option value="false">Inactive</option>
+          </select>
+        </div>
+        <div class="field"><label>Avatar Color</label>
+          <select id="t-color">
+            <option value="#6c8cff">Blue (Manager)</option>
+            <option value="#a78bfa">Purple (Anchor)</option>
+            <option value="#22d3ee">Teal (Camera)</option>
+            <option value="#f472b6">Pink (Editor)</option>
+            <option value="#fb923c">Orange (Publisher)</option>
+            <option value="#34d399">Green (Writer)</option>
+            <option value="#fbbf24">Amber</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="team-delete-btn" onclick="deleteTeamMember()" style="display:none;">🗑 Delete</button>
+      <div style="display:flex;gap:8px;margin-left:auto;">
+        <button class="btn btn-ghost" onclick="closeModal('team-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveTeamMember()">Save Member</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// SUPABASE
+// ══════════════════════════════════════════════
+const SUPA_URL = 'https://njxwfgcayotvjmozhlab.supabase.co';
+const SUPA_KEY = 'sb_publishable_Qo_hvPXG8qJfMgUZ12ILDQ_FlaZypMm';
+const { createClient } = supabase;
+const sb = createClient(SUPA_URL, SUPA_KEY);
+
+let currentUser = null;
+let currentMember = null;
+let allDoctors = [];
+let allTeam = [];
+let editingDoctorId = null;
+let editingTeamId = null;
+let docPhotoFile = null;
+let teamPhotoFile = null;
+let docCurrentFilter = 'all';
+let teamCurrentFilter = 'all';
+
+// ══════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════
+function loader(on){ document.getElementById('loader').classList.toggle('hidden',!on); }
+function toast(msg,ok=true){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className=ok?'show':'show error';
+  setTimeout(()=>t.className='',3200);
+}
+function initials(n){ return n?n.replace('Dr. ','').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase():'?'; }
+function fmtRole(r){ return r?r.replace('_',' ').replace(/\b\w/g,c=>c.toUpperCase()):'—'; }
+
+// ══════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════
+async function doLogin(){
+  const email=document.getElementById('l-email').value.trim();
+  const pass=document.getElementById('l-pass').value;
+  const errEl=document.getElementById('l-err');
+  errEl.style.display='none';
+  loader(true);
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  loader(false);
+  if(error){ errEl.textContent=error.message; errEl.style.display='block'; return; }
+  currentUser=data.user;
+  await initApp();
+}
+async function doLogout(){
+  await sb.auth.signOut();
+  location.reload();
+}
+document.getElementById('l-pass').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+async function initApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  loader(true);
+  const {data:m}=await sb.from('team_members').select('*').eq('email',currentUser.email).single();
+  currentMember=m;
+  if(m){
+    document.getElementById('sb-name').textContent=m.full_name;
+    document.getElementById('sb-role').textContent=fmtRole(m.role);
+    document.getElementById('sb-av').textContent=initials(m.full_name);
+    document.getElementById('sb-av').style.color=m.avatar_color||'var(--accent)';
+    if(!['manager','admin'].includes(m.role)){
+      toast('Access denied. Managers only.',false);
+      await doLogout(); return;
+    }
+  }
+  await Promise.all([loadDoctors(),loadTeam()]);
+  renderDocStats();
+  renderDoctors(allDoctors);
+  loader(false);
+}
+
+// ══════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════
+function nav(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  el.classList.add('active');
+  const info={doctors:{title:'Doctor Management',sub:'Add, edit and manage all doctors',btn:'+ Add Doctor'},team:{title:'Team Management',sub:'Manage anchors, editors, DOPs and publishers',btn:'+ Add Member'}};
+  document.getElementById('pg-title').textContent=info[id].title;
+  document.getElementById('pg-sub').textContent=info[id].sub;
+  document.getElementById('add-btn').textContent=info[id].btn;
+  if(id==='team'){ renderTeamStats(); renderTeamCards(allTeam); }
+  if(id==='doctors'){ renderDocStats(); renderDoctors(allDoctors); }
+}
+
+function setView(v,btn){
+  document.querySelectorAll('.vt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('doc-cards').style.display=v==='card'?'grid':'none';
+  document.getElementById('doc-table').style.display=v==='table'?'block':'none';
+}
+
+// ══════════════════════════════════════════════
+// LOAD DATA
+// ══════════════════════════════════════════════
+async function loadDoctors(){
+  const {data}=await sb.from('doctors').select('*').order('doctor_id');
+  allDoctors=data||[];
+}
+async function loadTeam(){
+  const {data}=await sb.from('team_members').select('*').order('role,full_name');
+  allTeam=data||[];
+}
+
+// ══════════════════════════════════════════════
+// DOCTOR STATS
+// ══════════════════════════════════════════════
+function renderDocStats(){
+  const total=allDoctors.length;
+  const active=allDoctors.filter(d=>d.onboard_status==='Active').length;
+  const boarding=allDoctors.filter(d=>d.onboard_status==='Onboarding').length;
+  const withPhoto=allDoctors.filter(d=>d.photo_url).length;
+  document.getElementById('doc-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-label">Total Doctors</div><div class="stat-val" style="color:var(--pink)">${total}</div><div class="stat-sub">of 100 target</div></div>
+    <div class="stat-card"><div class="stat-label">Active</div><div class="stat-val" style="color:var(--green)">${active}</div><div class="stat-sub">shooting content</div></div>
+    <div class="stat-card"><div class="stat-label">Onboarding</div><div class="stat-val" style="color:var(--amber)">${boarding}</div><div class="stat-sub">in progress</div></div>
+    <div class="stat-card"><div class="stat-label">With Photo</div><div class="stat-val" style="color:var(--teal)">${withPhoto}</div><div class="stat-sub">profile complete</div></div>
+  `;
+}
+
+// ══════════════════════════════════════════════
+// RENDER DOCTORS — CARDS
+// ══════════════════════════════════════════════
+const COLORS=['var(--accent)','var(--pink)','var(--teal)','var(--amber)','var(--green)','var(--orange)','var(--accent2)'];
+function renderDoctors(list){
+  // Cards
+  if(!list.length){
+    document.getElementById('doc-cards').innerHTML=`<div class="empty"><div class="ei">👨‍⚕️</div><div class="et">No doctors found</div></div>`;
+    document.getElementById('doc-tbody').innerHTML='';
+    return;
+  }
+  document.getElementById('doc-cards').innerHTML=list.map((d,i)=>{
+    const col=COLORS[i%COLORS.length];
+    const photo=d.photo_url?`<img src="${d.photo_url}" class="card-photo" onerror="this.style.display='none'">`:
+      `<div class="card-photo-placeholder" style="background:${col}22;color:${col}">${initials(d.full_name)}</div>`;
+    const socials=[
+      d.youtube_url&&`<a class="social-link yt" href="${d.youtube_url}" target="_blank" title="YouTube">▶</a>`,
+      d.instagram_url&&`<a class="social-link ig" href="${d.instagram_url}" target="_blank" title="Instagram">📸</a>`,
+      d.facebook_url&&`<a class="social-link fb" href="${d.facebook_url}" target="_blank" title="Facebook">f</a>`,
+      d.twitter_url&&`<a class="social-link tw" href="${d.twitter_url}" target="_blank" title="Twitter">𝕏</a>`,
+      d.linkedin_url&&`<a class="social-link li" href="${d.linkedin_url}" target="_blank" title="LinkedIn">in</a>`,
+      d.whatsapp&&`<a class="social-link wa" href="https://wa.me/${d.whatsapp.replace(/\D/g,'')}" target="_blank" title="WhatsApp">💬</a>`,
+      d.website_url&&`<a class="social-link web" href="${d.website_url}" target="_blank" title="Website">🌐</a>`,
+    ].filter(Boolean).join('');
+    return `<div class="person-card">
+      <div class="card-photo-wrap">
+        ${photo}
+        <div class="card-edit-btn" onclick="openEditDoctor('${d.id}')">✏️ Edit</div>
+      </div>
+      <div class="card-body">
+        <div class="card-name">${d.full_name}</div>
+        <div class="card-meta">${d.specialty}${d.hospital?' · '+d.hospital:''}</div>
+        <div class="card-badges">
+          <span class="badge ${d.onboard_status==='Active'?'bg-green':d.onboard_status==='Onboarding'?'bg-amber':'bg-gray'}">${d.onboard_status}</span>
+          ${d.city?`<span class="badge bg-gray">${d.city}</span>`:''}
+          ${d.experience_yrs?`<span class="badge bg-blue">${d.experience_yrs} yrs</span>`:''}
+        </div>
+        ${socials?`<div class="social-links">${socials}</div>`:'<div style="font-size:11px;color:var(--text3);">No social links added</div>'}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Table
+  document.getElementById('doc-tbody').innerHTML=list.map((d,i)=>{
+    const col=COLORS[i%COLORS.length];
+    const avatar=d.photo_url?`<img src="${d.photo_url}" class="avatar-sm" onerror="this.outerHTML='<div class=\\'avatar-sm-placeholder\\' style=\\'background:${col}22;color:${col}\\'>${initials(d.full_name)}</div>'">`:`<div class="avatar-sm-placeholder" style="background:${col}22;color:${col}">${initials(d.full_name)}</div>`;
+    const hasSocial=[d.youtube_url,d.instagram_url,d.facebook_url,d.twitter_url,d.linkedin_url,d.website_url].filter(Boolean).length;
+    return `<tr>
+      <td>${avatar}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);">${d.doctor_id}</td>
+      <td class="td-p">${d.full_name}</td>
+      <td>${d.specialty}</td>
+      <td style="font-size:12px;">${d.hospital||'—'}</td>
+      <td><span class="badge ${d.onboard_status==='Active'?'bg-green':d.onboard_status==='Onboarding'?'bg-amber':'bg-gray'}">${d.onboard_status}</span></td>
+      <td><span class="badge ${hasSocial>0?'bg-teal':'bg-gray'}">${hasSocial} links</span></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="openEditDoctor('${d.id}')">✏️ Edit</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+// FILTER DOCTORS
+// ══════════════════════════════════════════════
+function docFilter(el,status){
+  el.closest('.toolbar').querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  docCurrentFilter=status;
+  applyDocFilters();
+}
+function filterDoctors(q){ applyDocFilters(q); }
+function applyDocFilters(q){
+  q=q||document.getElementById('doc-search').value.toLowerCase();
+  let list=allDoctors;
+  if(docCurrentFilter!=='all') list=list.filter(d=>d.onboard_status===docCurrentFilter);
+  if(q) list=list.filter(d=>d.full_name.toLowerCase().includes(q)||d.specialty.toLowerCase().includes(q)||(d.hospital||'').toLowerCase().includes(q)||(d.doctor_id||'').toLowerCase().includes(q));
+  renderDoctors(list);
+}
+
+// ══════════════════════════════════════════════
+// DOCTOR MODAL — ADD
+// ══════════════════════════════════════════════
+function openAddModal(){
+  const page=document.querySelector('.page.active').id;
+  if(page==='page-doctors') openAddDoctor();
+  else openAddTeam();
+}
+
+function openAddDoctor(){
+  editingDoctorId=null; docPhotoFile=null;
+  document.getElementById('doc-modal-title').textContent='Add New Doctor';
+  document.getElementById('doc-delete-btn').style.display='none';
+  document.getElementById('doc-photo-preview').innerHTML='👨‍⚕️';
+  // Auto next ID
+  const nums=allDoctors.map(d=>parseInt((d.doctor_id||'').replace('STV-DR-',''))||0);
+  const nextNum=nums.length?Math.max(...nums)+1:1;
+  document.getElementById('d-id').value='STV-DR-'+String(nextNum).padStart(3,'0');
+  document.getElementById('d-id').readOnly=false;
+  // Clear fields
+  ['d-name','d-hospital','d-city','d-phone','d-email','d-bio','d-lang','d-yt','d-ig','d-fb','d-tw','d-li','d-wa','d-web'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('d-specialty').value='';
+  document.getElementById('d-status').value='Onboarding';
+  document.getElementById('d-days').value='4';
+  document.getElementById('d-exp').value='';
+  document.getElementById('doc-modal').classList.add('open');
+}
+
+function openEditDoctor(id){
+  const d=allDoctors.find(x=>x.id===id); if(!d) return;
+  editingDoctorId=id; docPhotoFile=null;
+  document.getElementById('doc-modal-title').textContent='Edit Doctor';
+  document.getElementById('doc-delete-btn').style.display='inline-flex';
+  document.getElementById('d-id').value=d.doctor_id||'';
+  document.getElementById('d-id').readOnly=true;
+  document.getElementById('d-name').value=d.full_name||'';
+  document.getElementById('d-specialty').value=d.specialty||'';
+  document.getElementById('d-hospital').value=d.hospital||'';
+  document.getElementById('d-city').value=d.city||'';
+  document.getElementById('d-phone').value=d.phone||'';
+  document.getElementById('d-email').value=d.email||'';
+  document.getElementById('d-exp').value=d.experience_yrs||'';
+  document.getElementById('d-days').value=d.shoot_days_per_week||4;
+  document.getElementById('d-status').value=d.onboard_status||'Active';
+  document.getElementById('d-lang').value=d.languages||'';
+  document.getElementById('d-bio').value=d.bio||'';
+  document.getElementById('d-yt').value=d.youtube_url||'';
+  document.getElementById('d-ig').value=d.instagram_url||'';
+  document.getElementById('d-fb').value=d.facebook_url||'';
+  document.getElementById('d-tw').value=d.twitter_url||'';
+  document.getElementById('d-li').value=d.linkedin_url||'';
+  document.getElementById('d-wa').value=d.whatsapp||'';
+  document.getElementById('d-web').value=d.website_url||'';
+  // Photo preview
+  const prev=document.getElementById('doc-photo-preview');
+  if(d.photo_url) prev.innerHTML=`<img src="${d.photo_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  else prev.innerHTML='👨‍⚕️';
+  document.getElementById('doc-modal').classList.add('open');
+}
+
+// ══════════════════════════════════════════════
+// PHOTO UPLOAD
+// ══════════════════════════════════════════════
+function handlePhotoSelect(input,type){
+  const file=input.files[0]; if(!file) return;
+  if(file.size>2*1024*1024){ toast('Photo must be under 2MB',false); return; }
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const prev=document.getElementById(type+'-photo-preview');
+    prev.innerHTML=`<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  };
+  reader.readAsDataURL(file);
+  if(type==='doc') docPhotoFile=file;
+  else teamPhotoFile=file;
+}
+
+async function uploadPhoto(file,folder){
+  const ext=file.name.split('.').pop();
+  const path=`${folder}/${Date.now()}.${ext}`;
+  const {data,error}=await sb.storage.from('photos').upload(path,file,{upsert:true,contentType:file.type});
+  if(error) throw error;
+  const {data:{publicUrl}}=sb.storage.from('photos').getPublicUrl(path);
+  return publicUrl;
+}
+
+// ══════════════════════════════════════════════
+// SAVE DOCTOR
+// ══════════════════════════════════════════════
+async function saveDoctor(){
+  const doctorId=document.getElementById('d-id').value.trim();
+  const name=document.getElementById('d-name').value.trim();
+  const specialty=document.getElementById('d-specialty').value;
+  if(!name||!specialty||!doctorId){ toast('Name, specialty and ID are required',false); return; }
+
+  loader(true);
+  let photoUrl=editingDoctorId?allDoctors.find(d=>d.id===editingDoctorId)?.photo_url:null;
+
+  // Upload photo if selected
+  if(docPhotoFile){
+    try{
+      document.getElementById('doc-upload-progress').style.display='block';
+      document.getElementById('doc-upload-status').textContent='Uploading photo…';
+      photoUrl=await uploadPhoto(docPhotoFile,'doctors');
+      document.getElementById('doc-upload-status').textContent='Photo uploaded ✓';
+    }catch(e){
+      toast('Photo upload failed: '+e.message,false);
+      loader(false); return;
+    }
+  }
+
+  const payload={
+    doctor_id:doctorId,
+    full_name:name,
+    specialty,
+    hospital:document.getElementById('d-hospital').value.trim()||null,
+    city:document.getElementById('d-city').value.trim()||null,
+    phone:document.getElementById('d-phone').value.trim()||null,
+    email:document.getElementById('d-email').value.trim()||null,
+    experience_yrs:parseInt(document.getElementById('d-exp').value)||null,
+    shoot_days_per_week:parseInt(document.getElementById('d-days').value)||4,
+    onboard_status:document.getElementById('d-status').value,
+    languages:document.getElementById('d-lang').value.trim()||null,
+    bio:document.getElementById('d-bio').value.trim()||null,
+    youtube_url:document.getElementById('d-yt').value.trim()||null,
+    instagram_url:document.getElementById('d-ig').value.trim()||null,
+    facebook_url:document.getElementById('d-fb').value.trim()||null,
+    twitter_url:document.getElementById('d-tw').value.trim()||null,
+    linkedin_url:document.getElementById('d-li').value.trim()||null,
+    whatsapp:document.getElementById('d-wa').value.trim()||null,
+    website_url:document.getElementById('d-web').value.trim()||null,
+    photo_url:photoUrl,
+  };
+
+  let error;
+  if(editingDoctorId){
+    ({error}=await sb.from('doctors').update(payload).eq('id',editingDoctorId));
+  } else {
+    ({error}=await sb.from('doctors').insert(payload));
+  }
+  loader(false);
+  if(error){ toast('Save failed: '+error.message,false); return; }
+  toast(editingDoctorId?'Doctor updated ✓':'Doctor added ✓');
+  closeModal('doc-modal');
+  await loadDoctors();
+  renderDocStats();
+  applyDocFilters();
+}
+
+async function deleteDoctor(){
+  if(!editingDoctorId) return;
+  if(!confirm('Delete this doctor? This cannot be undone.')) return;
+  loader(true);
+  const {error}=await sb.from('doctors').delete().eq('id',editingDoctorId);
+  loader(false);
+  if(error){ toast('Delete failed: '+error.message,false); return; }
+  toast('Doctor deleted');
+  closeModal('doc-modal');
+  await loadDoctors();
+  renderDocStats();
+  applyDocFilters();
+}
+
+// ══════════════════════════════════════════════
+// TEAM STATS
+// ══════════════════════════════════════════════
+function renderTeamStats(){
+  const total=allTeam.length;
+  const roles={anchor:0,dop:0,editor:0,publisher:0};
+  allTeam.forEach(m=>{ if(roles[m.role]!==undefined) roles[m.role]++; });
+  document.getElementById('team-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-label">Total Members</div><div class="stat-val" style="color:var(--accent)">${total}</div></div>
+    <div class="stat-card"><div class="stat-label">Anchors</div><div class="stat-val" style="color:var(--accent2)">${roles.anchor}</div></div>
+    <div class="stat-card"><div class="stat-label">Editors</div><div class="stat-val" style="color:var(--pink)">${roles.editor}</div></div>
+    <div class="stat-card"><div class="stat-label">Camera / DOP</div><div class="stat-val" style="color:var(--teal)">${roles.dop}</div></div>
+  `;
+}
+
+// ══════════════════════════════════════════════
+// RENDER TEAM CARDS
+// ══════════════════════════════════════════════
+function renderTeamCards(list){
+  if(!list.length){
+    document.getElementById('team-cards').innerHTML=`<div class="empty"><div class="ei">👥</div><div class="et">No team members found</div></div>`;
+    return;
+  }
+  document.getElementById('team-cards').innerHTML=list.map(m=>{
+    const col=m.avatar_color||'var(--accent)';
+    const photo=m.photo_url?`<img src="${m.photo_url}" class="card-photo" onerror="this.style.display='none'">`:
+      `<div class="card-photo-placeholder" style="background:${col}22;color:${col}">${initials(m.full_name)}</div>`;
+    return `<div class="person-card">
+      <div class="card-photo-wrap">
+        ${photo}
+        <div class="card-edit-btn" onclick="openEditTeam('${m.id}')">✏️ Edit</div>
+      </div>
+      <div class="card-body">
+        <div class="card-name">${m.full_name}</div>
+        <div class="card-meta">${m.email}</div>
+        <div class="card-badges">
+          <span class="badge" style="background:${col}22;color:${col}">${fmtRole(m.role)}</span>
+          <span class="badge ${m.is_active?'bg-green':'bg-gray'}">${m.is_active?'Active':'Inactive'}</span>
+          ${m.department?`<span class="badge bg-gray">${m.department}</span>`:''}
+        </div>
+        ${m.phone?`<div style="font-size:12px;color:var(--text3);margin-top:6px;">📞 ${m.phone}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function teamFilter(el,role){
+  el.closest('.toolbar').querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  teamCurrentFilter=role;
+  applyTeamFilters();
+}
+function filterTeam(q){ applyTeamFilters(q); }
+function applyTeamFilters(q){
+  q=q||'';
+  let list=allTeam;
+  if(teamCurrentFilter!=='all') list=list.filter(m=>m.role===teamCurrentFilter);
+  if(q) list=list.filter(m=>m.full_name.toLowerCase().includes(q.toLowerCase())||m.email.toLowerCase().includes(q.toLowerCase()));
+  renderTeamCards(list);
+}
+
+// ══════════════════════════════════════════════
+// TEAM MODAL
+// ══════════════════════════════════════════════
+function openAddTeam(){
+  editingTeamId=null; teamPhotoFile=null;
+  document.getElementById('team-modal-title').textContent='Add Team Member';
+  document.getElementById('team-delete-btn').style.display='none';
+  document.getElementById('team-photo-preview').innerHTML='👤';
+  ['t-name','t-email','t-dept','t-phone'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('t-role').value='';
+  document.getElementById('t-active').value='true';
+  document.getElementById('t-color').value='#6c8cff';
+  document.getElementById('t-join').value='';
+  document.getElementById('team-modal').classList.add('open');
+}
+
+function openEditTeam(id){
+  const m=allTeam.find(x=>x.id===id); if(!m) return;
+  editingTeamId=id; teamPhotoFile=null;
+  document.getElementById('team-modal-title').textContent='Edit Team Member';
+  document.getElementById('team-delete-btn').style.display='inline-flex';
+  document.getElementById('t-name').value=m.full_name||'';
+  document.getElementById('t-email').value=m.email||'';
+  document.getElementById('t-role').value=m.role||'';
+  document.getElementById('t-dept').value=m.department||'';
+  document.getElementById('t-phone').value=m.phone||'';
+  document.getElementById('t-active').value=m.is_active?'true':'false';
+  document.getElementById('t-color').value=m.avatar_color||'#6c8cff';
+  document.getElementById('t-join').value=m.join_date||'';
+  const prev=document.getElementById('team-photo-preview');
+  if(m.photo_url) prev.innerHTML=`<img src="${m.photo_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  else prev.innerHTML='👤';
+  document.getElementById('team-modal').classList.add('open');
+}
+
+async function saveTeamMember(){
+  const name=document.getElementById('t-name').value.trim();
+  const email=document.getElementById('t-email').value.trim();
+  const role=document.getElementById('t-role').value;
+  if(!name||!email||!role){ toast('Name, email and role are required',false); return; }
+  loader(true);
+  let photoUrl=editingTeamId?allTeam.find(m=>m.id===editingTeamId)?.photo_url:null;
+  if(teamPhotoFile){
+    try{ photoUrl=await uploadPhoto(teamPhotoFile,'team'); }
+    catch(e){ toast('Photo upload failed',false); loader(false); return; }
+  }
+  const payload={
+    full_name:name, email, role,
+    department:document.getElementById('t-dept').value.trim()||null,
+    phone:document.getElementById('t-phone').value.trim()||null,
+    is_active:document.getElementById('t-active').value==='true',
+    avatar_color:document.getElementById('t-color').value,
+    join_date:document.getElementById('t-join').value||null,
+    photo_url:photoUrl,
+  };
+  let error;
+  if(editingTeamId){
+    ({error}=await sb.from('team_members').update(payload).eq('id',editingTeamId));
+  } else {
+    ({error}=await sb.from('team_members').insert(payload));
+  }
+  loader(false);
+  if(error){ toast('Save failed: '+error.message,false); return; }
+  toast(editingTeamId?'Member updated ✓':'Member added ✓');
+  closeModal('team-modal');
+  await loadTeam();
+  renderTeamStats();
+  applyTeamFilters();
+}
+
+async function deleteTeamMember(){
+  if(!editingTeamId) return;
+  if(!confirm('Delete this team member? This cannot be undone.')) return;
+  loader(true);
+  const {error}=await sb.from('team_members').delete().eq('id',editingTeamId);
+  loader(false);
+  if(error){ toast('Delete failed: '+error.message,false); return; }
+  toast('Member deleted');
+  closeModal('team-modal');
+  await loadTeam();
+  renderTeamStats();
+  applyTeamFilters();
+}
+
+// ══════════════════════════════════════════════
+// MODAL HELPERS
+// ══════════════════════════════════════════════
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('open'); });
+});
+
+// ══════════════════════════════════════════════
+// AUTO-LOGIN CHECK
+// ══════════════════════════════════════════════
+(async()=>{
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){ currentUser=session.user; await initApp(); }
+})();
+</script>
+</body>
+</html>
