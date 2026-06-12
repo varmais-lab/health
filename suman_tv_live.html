@@ -142,8 +142,8 @@ tr.clickable:hover td{background:rgba(255,255,255,0.02);color:var(--text);cursor
 .alert-meta{font-size:11px;color:var(--text3);margin-top:1px;}
 
 /* ── DETAIL PANEL ── */
-.detail-panel{width:0;flex-shrink:0;background:var(--bg2);border-left:1px solid var(--border);overflow:hidden;transition:width 0.25s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;position:relative;}
-.detail-panel.open{width:460px;}
+.detail-panel{width:0;flex-shrink:0;background:var(--bg2);border-left:1px solid var(--border);overflow:hidden;transition:width 0.25s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;position:relative;pointer-events:none;}
+.detail-panel.open{width:460px;pointer-events:all;}
 .dp-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0;}
 .dp-close{width:26px;height:26px;border-radius:6px;background:var(--bg3);border:1px solid var(--border);color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
 .dp-close:hover{color:var(--text);}
@@ -794,17 +794,17 @@ function renderProjRows(tbodyId,list,compact){
     const commentCount=p.comments?.length||0;
     const docName=p.doctor?.full_name||'—';
     if(compact){
-      return `<tr class="clickable" onclick="openDetail('${p.id}')">
+      return `<tr class="clickable" data-proj-id="${p.id}">
         <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);">${p.project_id}</td>
         <td class="td-p">${p.title}</td>
         <td style="font-size:12px;">${docName}</td>
         <td>${stageBadge(p.stage)}</td>
         <td style="font-size:11px;">${fmtDate(p.shoot_date)}</td>
         <td style="font-size:11px;">${fmtDate(p.publish_date)}</td>
-        <td><span style="cursor:pointer;font-size:12px;color:var(--text3);" onclick="event.stopPropagation();openDiscussion('${p.id}')">💬 ${commentCount}</span></td>
+        <td><span class="disc-btn" data-proj-id="${p.id}" style="cursor:pointer;font-size:12px;color:var(--text3);">💬 ${commentCount}</span></td>
       </tr>`;
     }
-    return `<tr class="clickable" onclick="openDetail('${p.id}')">
+    return `<tr class="clickable" data-proj-id="${p.id}">
       <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);">${p.project_id}</td>
       <td class="td-p">${p.title}</td>
       <td style="font-size:12px;">${docName}</td>
@@ -814,9 +814,23 @@ function renderProjRows(tbodyId,list,compact){
       <td style="font-size:12px;">${p.editor?.full_name||'—'}</td>
       <td style="font-size:11px;">${fmtDate(p.shoot_date)}</td>
       <td style="font-size:11px;">${fmtDate(p.publish_date)}</td>
-      <td><span style="cursor:pointer;font-size:12px;color:var(--text3);" onclick="event.stopPropagation();openDiscussion('${p.id}')">💬 ${commentCount}</span></td>
+      <td><span class="disc-btn" data-proj-id="${p.id}" style="cursor:pointer;font-size:12px;color:var(--text3);">💬 ${commentCount}</span></td>
     </tr>`;
   }).join('');
+
+  // Attach click handlers via event delegation (avoids issues with special chars in onclick)
+  tbody.querySelectorAll('tr.clickable').forEach(row=>{
+    row.addEventListener('click', e=>{
+      if(e.target.closest('.disc-btn')) return;
+      openDetail(row.dataset.projId);
+    });
+  });
+  tbody.querySelectorAll('.disc-btn').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      e.stopPropagation();
+      openDiscussion(btn.dataset.projId);
+    });
+  });
 }
 
 function searchProj(q){
